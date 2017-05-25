@@ -24,18 +24,47 @@ critics={'Lisa Rose': {'Lady in the Water': 2.5, 'Snakes on a Plane': 3.5,
 'The Night Listener': 3.0, 'Superman Returns': 5.0, 'You, Me and Dupree': 3.5},
 'Toby': {'Snakes on a Plane':4.5,'You, Me and Dupree':1.0,'Superman Returns':4.0}}
 
-def calc_sim_score(person1, person2):
+def calc_covaration(person1, person2):
+    # cov(x, y) = E(xy) - E(x)E(y)
     movies = extract_keys(person1, person2)
-    score = 0
+    mean1 = 0.0
+    mean2 = 0.0
+    mean1_2 = 0.0
     for movie in movies:
-        # we don't watch a movie, maybe we know it is bad or we don't know this movie
-        # give it a low score, but higher than 0
-        score_p1 = person1.get(movie, 1)
-        score_p2 = person2.get(movie, 1)
-        score += pow((score_p1 - score_p2), 2)
-    distance = 1.0 / (1 + sqrt(score))
+        mean1 += person1.get(movie, 1)
+        mean2 += person2.get(movie, 1)
+        mean1_2 += person1.get(movie, 1) * person2.get(movie, 1)
+    mean1 = mean1 / len(movies)
+    mean2 = mean2 / len(movies)
+    mean1_2 = mean1_2 / len(movies)
+    covaration = mean1_2 - mean1 * mean2
+    return covaration
 
-    return distance
+def calc_standard_deviation(person1, person2):
+    # sd(x) = sqrt(E(x^2) - E(x)^2)
+    movies = extract_keys(person1, person2)
+    mean1 = 0.0
+    mean1_2 = 0.0
+    mean2 = 0.0
+    mean2_2 = 0.0
+    for movie in movies:
+        mean1 += person1.get(movie, 1)
+        mean1_2 += pow(person1.get(movie, 1), 2)
+        mean2 += person2.get(movie, 1)
+        mean2_2 += pow(person2.get(movie, 1), 2)
+    mean1 /= len(movies)
+    mean1_2 /= len(movies)
+    mean2 /= len(movies)
+    mean2_2 /= len(movies)
+    sd1 = sqrt(mean1_2 - pow(mean1, 2))
+    sd2 = sqrt(mean2_2 - pow(mean2, 2))
+    sd1_2 = sd1 * sd2
+    return sd1_2
+
+def calc_pearson_score(person1, person2):
+    # pearson(x, y) = cov(x, y) / (sd(x) * sd(y))
+    pearson_score = calc_covaration(person1, person2) / calc_standard_deviation(person1, person2)
+    return pearson_score
 
 def create_sim_map(data):
     users = extract_keys(critics)
@@ -46,17 +75,14 @@ def create_sim_map(data):
     for user1 in users:
         for user2 in users:
             if user1 != user2:
-                sim_score = calc_sim_score(data[user1], data[user2])
+                sim_score = calc_pearson_score(data[user1], data[user2])
                 sim_map[user1][user2] = sim_score
-
-    return sim_map   
-
+    return sim_map
 
 def main():
     print_dict(critics)
     sim_map = create_sim_map(critics)
     print_dict(sim_map)
-
 
 if __name__ == "__main__":
     main()
