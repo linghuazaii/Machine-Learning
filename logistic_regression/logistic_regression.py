@@ -27,22 +27,28 @@ def plot_data(X, Y, image):
     #plt.clf()
 
 def sigmoid(x):
-    return 1.0 / (1.0 + np.exp(-x))
+    rs = 1.0 / (1.0 + np.exp(-x))
+    for (i, j), value in np.ndenumerate(rs):
+        if value < 1.0e-10:
+            rs[i][j] = 1.0e-10
+        elif value > 1.0 - 1.0e-10:
+            rs[i][j] = 1.0 - 1.0e-10
+    return rs
 
 def cost(theta, x, y, lam = 0.):
     m = x.shape[0]
     theta = np.reshape(theta, (len(theta), 1))
-    lamb = theta
+    lamb = theta.copy()
     lamb[0][0] = 0.
     J = (-1.0 / m) * (y.T.dot(np.log(sigmoid(x.dot(theta)))) + (1 - y).T.dot(np.log(1 - sigmoid(x.dot(theta))))) + lam / (2 * m) * lamb.T.dot(lamb)
-    #grad = (1.0 ./ m) * (np.transpose(x).dot(sigmoid(x.dot(theta) - y))) + (lam / m) * lamb
+    #grad = (1.0 / m) * (np.transpose(x).dot(sigmoid(x.dot(theta) - y)))# + (lam / m) * lamb
     #print J
     return J[0][0]
 
 def grad(theta, x, y, lam = 0.):
     m = x.shape[0]
     theta = np.reshape(theta, (len(theta), 1))
-    lamb = theta
+    lamb = theta.copy()
     lamb[0][0] = 0.
     grad = (1.0 / m) * (x.T.dot(sigmoid(x.dot(theta) - y))) + (lam / m) * lamb
     grad = grad.flatten()
@@ -55,15 +61,23 @@ def plot_boundary(theta):
     plt.savefig('boundary01.png')
     plt.clf()
 
+def plot_boundary2(theta):
+    x1 = np.arange(-1.0, 1.0, 0.001)
+    x2 = -(theta[0] + theta[1] * x1) / theta[2]
+    plt.plot(x1, x2)
+    plt.savefig('linear.png')
+    plt.clf()
+
 def main():
     X, Y = load_data('data.csv')
     plot_data(X, Y, 'data.png')
 
-    #theta = np.random.randn(4)
-    theta = [-3.87155337e-04, -5.70516730e-01, -1.05983874e+00, -4.53414382e-01]
+    theta = np.random.randn(4)
+    #theta = [-0.09602962, 0.05465897, -0.25948405, -0.88592286]
     #print theta
     X_new = np.append(np.ones((X.shape[0], 1)), X, axis = 1)
-    theta_final = opt.fmin_tnc(cost, theta, fprime = grad, args = (X_new, Y))
+    #theta_final = opt.fmin_tnc(cost, theta, fprime = grad, args = (X_new, Y))
+    theta_final = opt.fmin_tnc(cost, theta, fprime = grad, args = (X_new, Y), approx_grad = True, epsilon = 0.001, maxfun = 10000)
     theta_final = theta_final[0]
     print theta_final
     plot_boundary(theta_final)
